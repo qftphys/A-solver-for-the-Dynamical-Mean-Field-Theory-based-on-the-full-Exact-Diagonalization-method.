@@ -53,9 +53,10 @@ contains
     integer                         :: numstates
     integer                         :: r,m,k
     real(8)                         :: sgn,sgn1,sgn2
-    real(8)                         :: gs_weight
+    real(8)                         :: boltzman_weight
+    real(8)                         :: state_weight
+    real(8)                         :: weight
     real(8)                         :: Ei
-    real(8)                         :: peso
     real(8)                         :: norm
     real(8),dimension(Norb)         :: nup,ndw,Sz,nt
     type(sector_map)                :: H,HJ
@@ -84,8 +85,8 @@ contains
        !
        do istate=1,idim
           Ei=espace(isector)%e(istate)
-          peso=exp(-beta*Ei)/zeta_function
-          if(peso < cutoff)cycle
+          boltzman_weight=exp(-beta*Ei)/zeta_function
+          if(boltzman_weight < cutoff)cycle
           !
           evec => espace(isector)%M(:,istate)
           !
@@ -93,7 +94,8 @@ contains
              m=H%map(i)
              ib = bdecomp(m,2*Ns)
              !
-             gs_weight=peso*conjg(evec(i))*evec(i) !abs(espace(isector)%M(i,istate))**2
+             state_weight=conjg(evec(i))*evec(i)
+             weight = boltzman_weight*state_weight
              !
              !Get operators:
              do iorb=1,Norb
@@ -105,21 +107,21 @@ contains
              !
              !Evaluate averages of observables:
              do iorb=1,Norb
-                dens(iorb)     = dens(iorb)      +  nt(iorb)*gs_weight
-                dens_up(iorb)  = dens_up(iorb)   +  nup(iorb)*gs_weight
-                dens_dw(iorb)  = dens_dw(iorb)   +  ndw(iorb)*gs_weight
-                docc(iorb)     = docc(iorb)      +  nup(iorb)*ndw(iorb)*gs_weight
-                magz(iorb)     = magz(iorb)      +  (nup(iorb)-ndw(iorb))*gs_weight
-                sz2(iorb,iorb) = sz2(iorb,iorb)  +  (sz(iorb)*sz(iorb))*gs_weight
-                n2(iorb,iorb)  = n2(iorb,iorb)   +  (nt(iorb)*nt(iorb))*gs_weight
+                dens(iorb)     = dens(iorb)      +  nt(iorb)*weight
+                dens_up(iorb)  = dens_up(iorb)   +  nup(iorb)*weight
+                dens_dw(iorb)  = dens_dw(iorb)   +  ndw(iorb)*weight
+                docc(iorb)     = docc(iorb)      +  nup(iorb)*ndw(iorb)*weight
+                magz(iorb)     = magz(iorb)      +  (nup(iorb)-ndw(iorb))*weight
+                sz2(iorb,iorb) = sz2(iorb,iorb)  +  (sz(iorb)*sz(iorb))*weight
+                n2(iorb,iorb)  = n2(iorb,iorb)   +  (nt(iorb)*nt(iorb))*weight
                 do jorb=iorb+1,Norb
-                   sz2(iorb,jorb) = sz2(iorb,jorb)  +  (sz(iorb)*sz(jorb))*gs_weight
-                   sz2(jorb,iorb) = sz2(jorb,iorb)  +  (sz(jorb)*sz(iorb))*gs_weight
-                   n2(iorb,jorb)  = n2(iorb,jorb)   +  (nt(iorb)*nt(jorb))*gs_weight
-                   n2(jorb,iorb)  = n2(jorb,iorb)   +  (nt(jorb)*nt(iorb))*gs_weight
+                   sz2(iorb,jorb) = sz2(iorb,jorb)  +  (sz(iorb)*sz(jorb))*weight
+                   sz2(jorb,iorb) = sz2(jorb,iorb)  +  (sz(jorb)*sz(iorb))*weight
+                   n2(iorb,jorb)  = n2(iorb,jorb)   +  (nt(iorb)*nt(jorb))*weight
+                   n2(jorb,iorb)  = n2(jorb,iorb)   +  (nt(jorb)*nt(iorb))*weight
                 enddo
              enddo
-             s2tot = s2tot  + (sum(sz))**2*gs_weight
+             s2tot = s2tot  + (sum(sz))**2*weight
           enddo
        enddo
        deallocate(H%map)
@@ -162,9 +164,11 @@ contains
     integer                         :: numstates
     integer                         :: m,k1,k2,k3,k4
     real(8)                         :: sg1,sg2,sg3,sg4
-    real(8)                         :: Egs,gs_weight
+    real(8)                         :: Egs
     real(8)                         :: Ei
-    real(8)                         :: peso
+    real(8)                         :: boltzman_weight
+    real(8)                         :: state_weight
+    real(8)                         :: weight
     real(8)                         :: norm
     real(8),dimension(Norb)         :: nup,ndw
     real(8),dimension(Nspin,Norb)   :: eloc
@@ -194,8 +198,8 @@ contains
        !
        do istate=1,idim
           Ei=espace(isector)%e(istate)
-          peso=exp(-beta*Ei)/zeta_function
-          if(peso < cutoff)cycle
+          boltzman_weight=exp(-beta*Ei)/zeta_function
+          if(boltzman_weight < cutoff)cycle
           !
           evec => espace(isector)%M(:,istate)
           !
@@ -203,7 +207,8 @@ contains
              m=H%map(i)
              ib = bdecomp(m,2*Ns)
              !
-             gs_weight = conjg(evec(i))*evec(i)
+             state_weight = conjg(evec(i))*evec(i)
+             weight = boltzman_weight*state_weight
              !
              !Get operators:
              do iorb=1,Norb
@@ -214,7 +219,7 @@ contains
              !start evaluating the Tr(H_loc) to estimate potential energy
              !
              !LOCAL ENERGY
-             ed_Eknot = ed_Eknot + dot_product(eloc(1,:),nup)*gs_weight + dot_product(eloc(Nspin,:),ndw)*gs_weight
+             ed_Eknot = ed_Eknot + dot_product(eloc(1,:),nup)*weight + dot_product(eloc(Nspin,:),ndw)*weight
              !==> HYBRIDIZATION TERMS I: same or different orbitals, same spins.
              do iorb=1,Norb
                 do jorb=1,Norb
@@ -224,7 +229,7 @@ contains
                       call cdg(iorb,k1,k2,sg2)
                       j=binary_search(H%map,k2)
                       if(j==0)cycle
-                      ed_Eknot = ed_Eknot + impHloc(1,1,iorb,jorb)*sg1*sg2*evec(i)*conjg(evec(j))
+                      ed_Eknot = ed_Eknot + impHloc(1,1,iorb,jorb)*sg1*sg2*evec(i)*conjg(evec(j))*boltzman_weight
                    endif
                    !SPIN DW
                    if((ib(iorb+Ns)==0).AND.(ib(jorb+Ns)==1))then
@@ -232,7 +237,7 @@ contains
                       call cdg(iorb+Ns,k1,k2,sg2)
                       j=binary_search(H%map,k2)
                       if(j==0)cycle
-                      ed_Eknot = ed_Eknot + impHloc(Nspin,Nspin,iorb,jorb)*sg1*sg2*evec(i)*conjg(evec(j))
+                      ed_Eknot = ed_Eknot + impHloc(Nspin,Nspin,iorb,jorb)*sg1*sg2*evec(i)*conjg(evec(j))*boltzman_weight
                    endif
                 enddo
              enddo
@@ -240,9 +245,9 @@ contains
              !
              !DENSITY-DENSITY INTERACTION: SAME ORBITAL, OPPOSITE SPINS
              !Euloc=\sum=i U_i*(n_u*n_d)_i
-             !ed_Epot = ed_Epot + dot_product(uloc,nup*ndw)*gs_weight
+             !ed_Epot = ed_Epot + dot_product(uloc,nup*ndw)*weight
              do iorb=1,Norb
-                ed_Epot = ed_Epot + Uloc(iorb)*nup(iorb)*ndw(iorb)*gs_weight
+                ed_Epot = ed_Epot + Uloc(iorb)*nup(iorb)*ndw(iorb)*weight
              enddo
              !
              !DENSITY-DENSITY INTERACTION: DIFFERENT ORBITALS, OPPOSITE SPINS
@@ -251,8 +256,8 @@ contains
              if(Norb>1)then
                 do iorb=1,Norb
                    do jorb=iorb+1,Norb
-                      ed_Epot = ed_Epot + Ust*(nup(iorb)*ndw(jorb) + nup(jorb)*ndw(iorb))*gs_weight
-                      ed_Dust = ed_Dust + (nup(iorb)*ndw(jorb) + nup(jorb)*ndw(iorb))*gs_weight
+                      ed_Epot = ed_Epot + Ust*(nup(iorb)*ndw(jorb) + nup(jorb)*ndw(iorb))*weight
+                      ed_Dust = ed_Dust + (nup(iorb)*ndw(jorb) + nup(jorb)*ndw(iorb))*weight
                    enddo
                 enddo
              endif
@@ -264,8 +269,8 @@ contains
              if(Norb>1)then
                 do iorb=1,Norb
                    do jorb=iorb+1,Norb
-                      ed_Epot = ed_Epot + (Ust-Jh)*(nup(iorb)*nup(jorb) + ndw(iorb)*ndw(jorb))*gs_weight
-                      ed_Dund = ed_Dund + (nup(iorb)*nup(jorb) + ndw(iorb)*ndw(jorb))*gs_weight
+                      ed_Epot = ed_Epot + (Ust-Jh)*(nup(iorb)*nup(jorb) + ndw(iorb)*ndw(jorb))*weight
+                      ed_Dund = ed_Dund + (nup(iorb)*nup(jorb) + ndw(iorb)*ndw(jorb))*weight
                    enddo
                 enddo
              endif
@@ -287,8 +292,8 @@ contains
                          call cdg(iorb,k3,k4,sg4)
                          j=binary_search(H%map,k4)
                          if(j==0)cycle
-                         ed_Epot = ed_Epot + Jx*sg1*sg2*sg3*sg4*evec(i)*conjg(evec(j))
-                         ed_Dse  = ed_Dse  + sg1*sg2*sg3*sg4*evec(i)*conjg(evec(j))
+                         ed_Epot = ed_Epot + Jx*sg1*sg2*sg3*sg4*evec(i)*conjg(evec(j))*boltzman_weight
+                         ed_Dse  = ed_Dse  + sg1*sg2*sg3*sg4*evec(i)*conjg(evec(j))*boltzman_weight
                       endif
                    enddo
                 enddo
@@ -312,8 +317,8 @@ contains
                          call cdg(iorb,k3,k4,sg4)
                          j=binary_search(H%map,k4)
                          if(j==0)cycle
-                         ed_Epot = ed_Epot + Jp*sg1*sg2*sg3*sg4*evec(i)*conjg(evec(j))
-                         ed_Dph  = ed_Dph  + sg1*sg2*sg3*sg4*evec(i)*conjg(evec(j))
+                         ed_Epot = ed_Epot + Jp*sg1*sg2*sg3*sg4*evec(i)*conjg(evec(j))*boltzman_weight
+                         ed_Dph  = ed_Dph  + sg1*sg2*sg3*sg4*evec(i)*conjg(evec(j))*boltzman_weight
                       endif
                    enddo
                 enddo
@@ -322,13 +327,13 @@ contains
              !HARTREE-TERMS CONTRIBUTION:
              if(hfmode)then
                 do iorb=1,Norb
-                   ed_Ehartree=ed_Ehartree - 0.5d0*uloc(iorb)*(nup(iorb)+ndw(iorb))*gs_weight + 0.25d0*uloc(iorb)*gs_weight
+                   ed_Ehartree=ed_Ehartree - 0.5d0*uloc(iorb)*(nup(iorb)+ndw(iorb))*weight + 0.25d0*uloc(iorb)*weight
                 enddo
                 if(Norb>1)then
                    do iorb=1,Norb
                       do jorb=iorb+1,Norb
-                         ed_Ehartree=ed_Ehartree - 0.5d0*Ust*(nup(iorb)+ndw(iorb)+nup(jorb)+ndw(jorb))*gs_weight + 0.25d0*Ust*gs_weight
-                         ed_Ehartree=ed_Ehartree - 0.5d0*(Ust-Jh)*(nup(iorb)+ndw(iorb)+nup(jorb)+ndw(jorb))*gs_weight + 0.25d0*(Ust-Jh)*gs_weight
+                         ed_Ehartree=ed_Ehartree - 0.5d0*Ust*(nup(iorb)+ndw(iorb)+nup(jorb)+ndw(jorb))*weight + 0.25d0*Ust*weight
+                         ed_Ehartree=ed_Ehartree - 0.5d0*(Ust-Jh)*(nup(iorb)+ndw(iorb)+nup(jorb)+ndw(jorb))*weight + 0.25d0*(Ust-Jh)*weight
                       enddo
                    enddo
                 endif
@@ -496,8 +501,8 @@ end MODULE ED_OBSERVABLES
 !             call build_sector(isector,H)
 !             do istate=1,idim
 !                Ei=espace(isector)%e(istate)
-!                peso=exp(-beta*Ei)/zeta_function
-!                if(peso < cutoff)cycle
+!                boltzman_weight=exp(-beta*Ei)/zeta_function
+!                if(boltzman_weight < cutoff)cycle
 !                !
 !                evec => espace(isector)%M(:,istate)
 !                !
@@ -529,7 +534,7 @@ end MODULE ED_OBSERVABLES
 !                      endif
 !                   enddo
 !                   deallocate(HJ%map)
-!                   phisc(iorb) = phisc(iorb) + dot_product(vvinit,vvinit)*peso
+!                   phisc(iorb) = phisc(iorb) + dot_product(vvinit,vvinit)*boltzman_weight
 !                   deallocate(vvinit)
 !                endif
 !                if(associated(evec)) nullify(evec)
@@ -551,8 +556,8 @@ end MODULE ED_OBSERVABLES
 !    call build_sector(isector,H)
 !    do istate=1,idim
 !       Ei=espace(isector)%e(istate)
-!       peso=exp(-beta*Ei)/zeta_function
-!       if(peso < cutoff)cycle
+!       boltzman_weight=exp(-beta*Ei)/zeta_function
+!       if(boltzman_weight < cutoff)cycle
 !       !
 !       evec => espace(isector)%M(:,istate)
 !       !
@@ -565,7 +570,7 @@ end MODULE ED_OBSERVABLES
 !                m=H%map(i)
 !                ib = bdecomp(m,2*Ns)
 !                imp_density_matrix(ispin,ispin,iorb,iorb) = imp_density_matrix(ispin,ispin,iorb,iorb) + &
-!                     peso*ib(isite)*conjg(evec(i))*evec(i)
+!                     ib(isite)*conjg(evec(i))*evec(i)*boltzman_weight
 !             enddo
 !          enddo
 !       enddo
@@ -587,7 +592,7 @@ end MODULE ED_OBSERVABLES
 !                         call cdg(isite,r,k,sgn2)
 !                         j=binary_search(H%map,k)
 !                         imp_density_matrix(ispin,jspin,iorb,jorb) = imp_density_matrix(ispin,jspin,iorb,jorb) + &
-!                              peso*sgn1*evec(i)*sgn2*conjg(evec(j))
+!                              sgn1*evec(i)*sgn2*conjg(evec(j))*boltzman_weight
 !                      endif
 !                   enddo
 !                enddo
