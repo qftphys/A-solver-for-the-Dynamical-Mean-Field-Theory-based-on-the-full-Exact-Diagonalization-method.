@@ -79,7 +79,7 @@ contains
     enddo
     !
     write(LOGfile,"(A)")"DIAG resume:"
-    open(free_unit(unit),file='egs'//reg(ed_file_suffix)//".ed",access='append')
+    open(free_unit(unit),file='egs'//reg(ed_file_suffix)//".ed",position='append')
     do isector=1,Nsectors
        if(e0(isector)/=0d0)cycle
        nup  = getnup(isector)
