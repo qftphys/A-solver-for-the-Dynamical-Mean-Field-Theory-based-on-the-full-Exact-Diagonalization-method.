@@ -167,17 +167,20 @@ contains
   !PURPOSE  : DOUBLE COMPLEX
   !+------------------------------------------------------------------+
   subroutine full_build_gf_normal_c(iorb,ispin)
-    real(8)          :: cdgmat,cc
+    real(8)          :: cc
+    complex(8)       :: op_weight
+    real(8)          :: spectral_weight
     integer          :: iorb,ispin,isite,istate
     integer          :: idim,isector
     integer          :: jdim,jsector
     integer          :: ib(Nlevels)
     integer          :: m,i,j,r,k,ll
     real(8)          :: sgn
-    real(8)          :: Ei,Ej,matcdg
+    real(8)          :: Ei,Ej
     real(8)          :: expterm,peso,de,w0,it,chij1
     complex(8)       :: iw
     type(sector_map) :: HI,HJ
+
     isite=impIndex(iorb,ispin)
     !
     call start_timer
@@ -194,33 +197,33 @@ contains
        call build_sector(jsector,HJ)
        do i=1,idim          !loop over the states in the i-th sect.
           do j=1,jdim       !loop over the states in the j-th sect.
-             cdgmat=0.d0
+             op_weight = zero
              expterm=exp(-beta*espace(isector)%e(i))+exp(-beta*espace(jsector)%e(j))
              if(expterm < cutoff)cycle
              !
-             do ll=1,idim              !loop over the component of |j> (IN state!)
+             do ll=1,idim              !loop over the component of |I> (IN state!)
                 m = HI%map(ll)
                 ib = bdecomp(m,2*Ns)
                 if(ib(isite) == 0)then
                    call cdg(isite,m,k,cc)
                    r = binary_search(HJ%map,k)
-                   cdgmat=cdgmat+espace(jsector)%M(r,j)*cc*espace(isector)%M(ll,i)
+                   op_weight =op_weight + conjg(espace(jsector)%M(r,j))*cc*espace(isector)%M(ll,i)
                 endif
              enddo
              Ei=espace(isector)%e(i)
              Ej=espace(jsector)%e(j)
              de=Ej-Ei
              peso=expterm/zeta_function
-             matcdg=peso*cdgmat**2
+             spectral_weight=peso*abs(op_weight)**2
              !
              do m=1,Lmats
                 iw=xi*wm(m)
-                impGmats(ispin,ispin,iorb,iorb,m)=impGmats(ispin,ispin,iorb,iorb,m)+matcdg/(iw+de)
+                impGmats(ispin,ispin,iorb,iorb,m)=impGmats(ispin,ispin,iorb,iorb,m)+spectral_weight/(iw+de)
              enddo
              !
              do m=1,Lreal
                 w0=wr(m);iw=cmplx(w0,eps)
-                impGreal(ispin,ispin,iorb,iorb,m)=impGreal(ispin,ispin,iorb,iorb,m)+matcdg/(iw+de)
+                impGreal(ispin,ispin,iorb,iorb,m)=impGreal(ispin,ispin,iorb,iorb,m)+spectral_weight/(iw+de)
              enddo
              !
           enddo
