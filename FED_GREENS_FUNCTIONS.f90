@@ -116,41 +116,10 @@ contains
     do ispin=1,Nspin
        do iorb=1,Norb
           write(LOGfile,"(A)")"Get G_l"//str(iorb)//"_s"//str(ispin)
-          call full_build_gf_normal_c(iorb,ispin)
+          call full_build_gf_normal_c_mix(iorb,ispin)
        enddo
     enddo
     !
-    !
-    ! !HYBRID:
-    ! if(bath_type/="normal")then
-    !    do ispin=1,Nspin
-    !       do iorb=1,Norb
-    !          do jorb=iorb+1,Norb
-    !             write(LOGfile,"(A)")"Get G_l"//str(iorb)//"_m"//str(jorb)//"_s"//str(ispin)
-    !             call full_build_gf_normal_mix_c(iorb,jorb,ispin)
-    !          enddo
-    !       enddo
-    !    enddo
-    !    !
-    !    !
-    !    !Put here off-diagonal manipulation by symmetry:
-    !    do ispin=1,Nspin
-    !       do iorb=1,Norb
-    !          do jorb=iorb+1,Norb
-    !             !
-    !             impGmats(ispin,ispin,iorb,jorb,:) = 0.5d0*(impGmats(ispin,ispin,iorb,jorb,:) &
-    !                  - (one-xi)*impGmats(ispin,ispin,iorb,iorb,:) - (one-xi)*impGmats(ispin,ispin,jorb,jorb,:))
-    !             impGreal(ispin,ispin,iorb,jorb,:) = 0.5d0*(impGreal(ispin,ispin,iorb,jorb,:) &
-    !                  - (one-xi)*impGreal(ispin,ispin,iorb,iorb,:) - (one-xi)*impGreal(ispin,ispin,jorb,jorb,:))
-    !             !>>ACTHUNG: this relation might not be true, it depends on the value of the impHloc_ij
-    !             ! if impHloc_ij is REAL then it is true. if CMPLX hermiticity must be ensured
-    !             impGmats(ispin,ispin,jorb,iorb,:) = impGmats(ispin,ispin,iorb,jorb,:)
-    !             impGreal(ispin,ispin,jorb,iorb,:) = impGreal(ispin,ispin,iorb,jorb,:)
-    !          enddo
-    !       enddo
-    !    enddo
-    ! endif
-    ! !
   end subroutine build_gf_normal
 
 
@@ -229,6 +198,83 @@ contains
     enddo
     call stop_progress
   end subroutine full_build_gf_normal_c
+
+
+
+  !+------------------------------------------------------------------+
+  !PURPOSE  : DOUBLE COMPLEX
+  !+------------------------------------------------------------------+
+  subroutine full_build_gf_normal_c_mix(iorb,ispin)
+    real(8)          :: spectral_weight,op_mat(2),sgn_cdg,sgn_c
+    integer          :: iorb,ispin,isite,istate
+    integer          :: idim,isector
+    integer          :: jdim,jsector
+    integer          :: ib(Nlevels)
+    integer          :: li,rj
+    integer          :: m,i,j,r,k,p
+    real(8)          :: sgn
+    real(8)          :: Ei,Ej
+    real(8)          :: expterm,peso,de,w0,it,chij1
+    complex(8)       :: iw
+    type(sector_map) :: HI,HJ
+    !
+    isite=impIndex(iorb,ispin)
+    !
+    call start_timer
+    !
+    do isector=1,Nsectors
+       jsector=getCDGsector(ispin,isector)
+       if(jsector==0)cycle
+       call eta(isector,Nsectors)
+       idim=getdim(isector)     !i-th sector dimension
+       jdim=getdim(jsector)     !j-th sector dimension
+       call build_sector(isector,HI)
+       call build_sector(jsector,HJ)
+       do i=1,idim          !loop over the states in the i-th sect.
+          do j=1,jdim       !loop over the states in the j-th sect.
+             op_mat=0.d0
+             expterm=exp(-beta*espace(isector)%e(i))+exp(-beta*espace(jsector)%e(j))
+             if(expterm < cutoff)cycle
+             !
+             do li=1,idim              !loop over the component of |I> (IN state!)
+                m = HI%map(li)
+                !
+                ib = bdecomp(m,2*Ns)
+                if(ib(isite) == 1)cycle
+                call cdg(isite,m,k,sgn_cdg)
+                rj = binary_search(HJ%map,k)
+                !
+                ib = bdecomp(k,2*Ns)
+                if(ib(isite) == 0)cycle
+                call c(isite,k,p,sgn_c)
+                if(p/=m)cycle
+                !
+                op_mat(1)=op_mat(1) + conjg(espace(jsector)%M(rj,j))*sgn_cdg*espace(isector)%M(li,i)
+                op_mat(2)=op_mat(2) + conjg(espace(isector)%M(li,i))*sgn_c*espace(jsector)%M(rj,j)
+                !
+             enddo
+             Ei=espace(isector)%e(i)
+             Ej=espace(jsector)%e(j)
+             de=Ej-Ei
+             peso=expterm/zeta_function
+             spectral_weight=peso*product(op_mat)
+             !
+             do m=1,Lmats
+                iw=xi*wm(m)
+                impGmats(ispin,ispin,iorb,iorb,m)=impGmats(ispin,ispin,iorb,iorb,m)+spectral_weight/(iw+de)
+             enddo
+             !
+             do m=1,Lreal
+                w0=wr(m);iw=cmplx(w0,eps)
+                impGreal(ispin,ispin,iorb,iorb,m)=impGreal(ispin,ispin,iorb,iorb,m)+spectral_weight/(iw+de)
+             enddo
+             !
+          enddo
+       enddo
+       deallocate(HI%map,HJ%map)
+    enddo
+    call stop_progress
+  end subroutine full_build_gf_normal_c_mix
 
 
 
