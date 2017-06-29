@@ -461,7 +461,7 @@ contains
        enddo
        !
        !
-    case ("hybrid","replica")             !hybrid: all _{ab} components allowed (inter-orbital local mixing present)
+    case ("hybrid")             !hybrid: all _{ab} components allowed (inter-orbital local mixing present)
        !
        !
        allocate(fgorb(Norb,Norb),zeta(Norb,Norb))
