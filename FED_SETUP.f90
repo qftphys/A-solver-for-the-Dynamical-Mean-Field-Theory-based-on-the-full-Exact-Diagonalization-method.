@@ -47,8 +47,6 @@ contains
        Ns = (Nbath+1)*Norb
     case ('hybrid')
        Ns = Nbath+Norb
-    case ('replica')
-       Ns = Norb*(Nbath+1)
     end select
     Nlevels  = 2*Ns
     !
@@ -122,7 +120,7 @@ contains
     if(Lfit>Lmats)Lfit=Lmats
     if(Nspin>2)stop "ED ERROR: Nspin > 2 is currently not supported"
     if(Norb>2)stop "ED ERROR: Norb > 2 is currently not supported"
-    if(bath_type=="hybrid")stop "ED ERROR: bath_type==hybrid is currently not supported"
+    ! if(bath_type=="hybrid")stop "ED ERROR: bath_type==hybrid is currently not supported"
     !
     !
     if(nread/=0.d0)then
@@ -248,12 +246,6 @@ contains
     case ('hybrid')
        do i=1,Nbath
           getBathStride(:,i)       = Norb + i
-       enddo
-    case ('replica')
-       do i=1,Nbath
-          do iorb=1,Norb
-             getBathStride(iorb,i) = iorb + i*Norb 
-          enddo
        enddo
     end select
     !
