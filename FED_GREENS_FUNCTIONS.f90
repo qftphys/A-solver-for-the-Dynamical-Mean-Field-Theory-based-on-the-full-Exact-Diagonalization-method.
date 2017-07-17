@@ -182,15 +182,20 @@ contains
                 call cdg(isite,m,k,sgn_cdg)
                 rj = binary_search(HJ%map,k)
                 !
-                ib = bdecomp(k,2*Ns)
-                if(ib(jsite) == 0)cycle
-                call c(jsite,k,p,sgn_c)
-                if(p /= m)cycle
-                !
                 op_mat(1)=op_mat(1) + conjg(espace(jsector)%M(rj,j))*sgn_cdg*espace(isector)%M(li,i)
-                op_mat(2)=op_mat(2) + conjg(espace(isector)%M(li,i))*sgn_c*espace(jsector)%M(rj,j)
-                !
              enddo
+
+             do rj=1,jdim
+                m = HJ%map(rj)
+                !
+                ib = bdecomp(m,2*Ns)
+                if(ib(jsite) == 0)cycle
+                call c(jsite,m,k,sgn_c)
+                li = binary_search(HI%map,k)
+                !
+                op_mat(2)=op_mat(2) + conjg(espace(isector)%M(li,i))*sgn_c*espace(jsector)%M(rj,j)
+             enddo
+             !
              Ei=espace(isector)%e(i)
              Ej=espace(jsector)%e(j)
              de=Ej-Ei
