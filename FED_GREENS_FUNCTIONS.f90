@@ -204,12 +204,12 @@ contains
              !
              do m=1,Lmats
                 iw=xi*wm(m)
-                impGmats(ispin,ispin,iorb,jorb,m)=impGmats(ispin,ispin,iorb,jorb,m)+spectral_weight/(iw+de)
+                impGmats(ispin,ispin,iorb,jorb,m)=impGmats(ispin,ispin,iorb,jorb,m)+spectral_weight/(iw-de)
              enddo
              !
              do m=1,Lreal
                 w0=wr(m);iw=cmplx(w0,eps)
-                impGreal(ispin,ispin,iorb,jorb,m)=impGreal(ispin,ispin,iorb,jorb,m)+spectral_weight/(iw+de)
+                impGreal(ispin,ispin,iorb,jorb,m)=impGreal(ispin,ispin,iorb,jorb,m)+spectral_weight/(iw-de)
              enddo
              !
           enddo
